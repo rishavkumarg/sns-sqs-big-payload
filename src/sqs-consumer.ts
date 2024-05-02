@@ -4,6 +4,7 @@ import { Message, MessageBodyAttributeMap, ReceiveMessageRequest, ReceiveMessage
 import { AWSError } from 'aws-sdk';
 import { PayloadMeta, S3PayloadMeta, SqsExtendedPayloadMeta } from './types';
 import { SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE } from './constants';
+import { v4 as uuid } from 'uuid';
 
 export interface SqsConsumerOptions {
     queueUrl: string;
@@ -122,17 +123,27 @@ export class SqsConsumer {
     }
 
     private async poll() {
+        const uuidTransId = uuid();
+        console.log(`Poller: ${uuidTransId} invoked for data-backup `);
         while (this.started) {
             try {
+                console.log(`Poller: ${uuidTransId} calling receiveMessages for data-backup`);
                 const response = await this.receiveMessages({
                     QueueUrl: this.queueUrl,
                     MaxNumberOfMessages: this.batchSize,
                     WaitTimeSeconds: this.waitTimeSeconds,
                     MessageAttributeNames: [SQS_LARGE_PAYLOAD_SIZE_ATTRIBUTE],
                 });
+                console.log(`Poller: ${uuidTransId} receiveMessages completed for data-backup`);
                 if (!this.started) return;
+                if(response && response.Messages){
+                    console.log(`Poller: ${uuidTransId} found some messages for data-backup`);
+                }else {
+                    console.log(`Poller: ${uuidTransId} not found messages for data-backup`);
+                }
                 await this.handleSqsResponse(response);
             } catch (err) {
+                console.log(`Poller: ${uuidTransId} error caught for data-backup | err ${err}`);
                 if (this.isConnError(err)) {
                     this.events.emit(SqsConsumerEvents.connectionError, err);
                     await new Promise((resolve) => setTimeout(resolve, this.connErrorTimeout));
@@ -142,7 +153,17 @@ export class SqsConsumer {
             }
             this.events.emit(SqsConsumerEvents.batchProcessed);
         }
-        this.events.emit(SqsConsumerEvents.pollEnded);
+        console.log(`Poller: ${uuidTransId} exiting for data-backup | recursively callng this.poll() | started -> ${this.started} | this.queueUrl.includes('databackup_job') --> ${this.queueUrl.includes('databackup_job')}`);
+        if(this.queueUrl.includes('databackup_job')){
+            console.log(`Poller: ${uuidTransId} calling this.poll() again | started -> ${this.started}`)
+            if(!this.started){
+                this.started = true;
+            }
+            this.poll();
+        }else{
+            console.log(`Poller: ${uuidTransId} not calling this.poll() again | started -> ${this.started}`)
+            this.events.emit(SqsConsumerEvents.pollEnded);
+        }
     }
 
     private isConnError(err: AWSError): boolean {

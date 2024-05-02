@@ -1,6 +1,6 @@
 {
-    "name": "sns-sqs-big-payload",
-    "version": "0.1.4",
+    "name": "sns-sqs-big-payload-druva",
+    "version": "0.2.4",
     "license": "Apache-2.0",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -11,7 +11,8 @@
         "prepublishOnly": "yarn build"
     },
     "dependencies": {
-        "uuid": "^7.0.2"
+        "uuid": "^7.0.2",
+        "yarn": "^1.22.22"
     },
     "devDependencies": {
         "@types/jest": "^29.4.0",
